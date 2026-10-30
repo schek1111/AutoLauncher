@@ -27,7 +27,7 @@ public class DiagnosticActivity extends Activity {
     private BluetoothSocket socket;
     private Thread worker;
     private TextView status, log;
-    private Button connectButton;
+    private Button connectButton, readButton;
     private volatile boolean running;
 
     @Override public void onCreate(Bundle state) {
@@ -48,6 +48,11 @@ public class DiagnosticActivity extends Activity {
         connectButton.setText("ВЫБРАТЬ ELM327");
         connectButton.setOnClickListener(v -> chooseDevice());
         buttons.addView(connectButton);
+        readButton = new Button(this);
+        readButton.setText("ОПРОС ЭБУ");
+        readButton.setEnabled(false);
+        readButton.setOnClickListener(v -> requestEcuData());
+        buttons.addView(readButton);
         Button back = new Button(this);
         back.setText("НАЗАД");
         back.setOnClickListener(v -> finish());
@@ -129,21 +134,46 @@ public class DiagnosticActivity extends Activity {
                 handler.post(() -> append("OK: "+step[1]+" ["+step[0]+"]"));
             }
         }
-        final boolean ready=configured;
-        handler.post(() -> {
-            if(ready) {
-                setStatus("ELM настроен для Январь 5.1.1. Ожидается проверка ответа ЭБУ");
-                append("Профиль адаптера применён. Это ещё не подтверждает связь с ЭБУ.");
-                append("Запросы параметров пока не отправлялись — ложные показания не выводятся.");
-            } else {
+        if(configured) {
+            handler.post(() -> append("Проверка связи с ЭБУ: запрос 2101…"));
+            String ecuResponse=sendElm("2101",in,out,5000);
+            String normalized=ecuResponse.toUpperCase(java.util.Locale.US).replace(" ","");
+            boolean ecuAnswered=normalized.contains("6101") && !normalized.contains("NODATA");
+            handler.post(() -> {
+                if(ecuAnswered) {
+                    setStatus("Получен ответ ЭБУ на запрос 2101");
+                    readButton.setEnabled(true);
+                    append("ЭБУ ответил. Сохрани журнал TX/RX для расшифровки.");
+                } else {
+                    setStatus("ELM настроен, ответ ЭБУ не подтверждён");
+                    append("2101 не дал подтверждённого ответа. Не считаем связь установленной.");
+                }
+            });
+        } else {
+            handler.post(() -> {
                 setStatus("Адаптер не принял одну или несколько настроек");
                 append("Связь с ЭБУ не подтверждена. Смотри строки ПРОВЕРЬ выше.");
-            }
-        });
+            });
+        }
     }
 
-    private String sendElm(String cmd,InputStream in,OutputStream out,long timeout) throws Exception {
-        while(in.available()>0) in.read();
+    private void requestEcuData() {
+        if(!running || socket==null) { append("Сначала подключи ELM327"); return; }
+        if(worker!=null && worker.isAlive()) { append("Опрос уже выполняется"); return; }
+        worker=new Thread(() -> {
+            try {
+                String response=sendElm("2101",socket.getInputStream(),socket.getOutputStream(),5000);
+                String normalized=response.toUpperCase(java.util.Locale.US).replace(" ","");
+                if(normalized.contains("6101")) handler.post(() -> setStatus("ЭБУ отвечает на 2101"));
+                else handler.post(() -> setStatus("Ответ ЭБУ не подтверждён"));
+            } catch(Exception e) {
+                handler.post(() -> { setStatus("Ошибка опроса: "+e.getMessage()); append("ERROR: "+e); });
+            }
+        });
+        worker.start();
+    }
+
+    private synchronized String sendElm(String cmd,InputStream in,OutputStream out,long timeout) throws Exception {
         out.write((cmd+"\r").getBytes("US-ASCII")); out.flush();
         handler.post(() -> append("TX: "+cmd));
         String response=readResponse(in,timeout);
@@ -164,6 +194,7 @@ public class DiagnosticActivity extends Activity {
     }
     private void disconnect() {
         running=false; closeSocket();
+        if(readButton!=null) readButton.setEnabled(false);
         if(status!=null) setStatus("Отключено");
         if(connectButton!=null) { connectButton.setText("ВЫБРАТЬ ELM327"); connectButton.setOnClickListener(v -> chooseDevice()); }
         if(log!=null) append("DISCONNECTED");
