@@ -60,7 +60,7 @@ public class MainActivity extends Activity {
     private void savePinnedApps() {
         StringBuilder value = new StringBuilder();
         for (DashboardView.AppShortcut app : dashboard.getPinnedApps()) {
-            if (value.length() > 0) value.append("\\n");
+            if (value.length() > 0) value.append('\n');
             value.append(app.packageName).append('|').append(app.label.replace("|", ""));
         }
         getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString(PINS, value.toString()).apply();
