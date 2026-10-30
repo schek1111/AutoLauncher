@@ -9,6 +9,7 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.view.View;
 
 public class MainActivity extends Activity {
     private DashboardView dashboard;
