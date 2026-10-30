@@ -32,6 +32,7 @@ public class MainActivity extends Activity {
         dashboard.setAppLauncher(this::launchPackage);
         dashboard.setAppDrawer(this::showAppDrawer);
         dashboard.setAppRemover(this::removePinnedApp);
+        dashboard.setDiagnosticOpener(() -> startActivity(new Intent(this, DiagnosticActivity.class)));
         dashboard.setPinnedApps(loadPinnedApps());
         setContentView(dashboard);
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
