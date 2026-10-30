@@ -14,6 +14,7 @@ public class DashboardView extends View {
     public interface AppLauncher { void launch(String packageName); }
     public interface AppDrawer { void open(); }
     public interface AppRemover { void remove(String packageName, String label); }
+    public interface DiagnosticOpener { void open(); }
     public static class AppShortcut {
         public final String packageName;
         public final String label;
@@ -25,6 +26,8 @@ public class DashboardView extends View {
     private AppLauncher appLauncher;
     private AppDrawer appDrawer;
     private AppRemover appRemover;
+    private DiagnosticOpener diagnosticOpener;
+    private final RectF obdHit = new RectF(118,380,536,588);
     private final List<AppShortcut> pinnedApps = new ArrayList<>();
     private final List<RectF> appHits = new ArrayList<>();
     private final List<RectF> removeHits = new ArrayList<>();
@@ -39,6 +42,7 @@ public class DashboardView extends View {
     public void setAppLauncher(AppLauncher l) { appLauncher = l; }
     public void setAppDrawer(AppDrawer d) { appDrawer = d; }
     public void setAppRemover(AppRemover r) { appRemover = r; }
+    public void setDiagnosticOpener(DiagnosticOpener d) { diagnosticOpener = d; }
     public void setGps(float kmh, float acc) { speed = kmh; accuracy = acc; postInvalidate(); }
     public void setGpsUnavailable() { speed = -1; postInvalidate(); }
     public void setPinnedApps(List<AppShortcut> apps) { pinnedApps.clear(); pinnedApps.addAll(apps); invalidate(); }
@@ -145,6 +149,7 @@ public class DashboardView extends View {
             case MotionEvent.ACTION_UP:
                 if(moved) return true;
                 if(allHit.contains(x,y)) { if(appDrawer!=null) appDrawer.open(); return true; }
+                if(obdHit.contains(x,y)) { if(diagnosticOpener!=null) diagnosticOpener.open(); return true; }
                 if(touchedIndex>=0 && touchedIndex<pinnedApps.size() && x>=12 && x<=104) {
                     AppShortcut app=pinnedApps.get(touchedIndex);
                     if(System.currentTimeMillis()-downTime>650) {
