@@ -144,7 +144,7 @@ public class DiagnosticActivity extends Activity {
 
     private String sendElm(String cmd,InputStream in,OutputStream out,long timeout) throws Exception {
         while(in.available()>0) in.read();
-        out.write((cmd+"\\r").getBytes("US-ASCII")); out.flush();
+        out.write((cmd+"\r").getBytes("US-ASCII")); out.flush();
         handler.post(() -> append("TX: "+cmd));
         String response=readResponse(in,timeout);
         String result=response.isEmpty()?"(нет ответа)":clean(response);
@@ -152,7 +152,7 @@ public class DiagnosticActivity extends Activity {
         return response;
     }
     private String clean(String value) {
-        return value.replace("\\r"," ").replace("\\n"," ").replace(">","").trim();
+        return value.replace("\r"," ").replace("\n"," ").replace(">","").trim();
     }
     private String readResponse(InputStream in,long timeout) throws Exception {
         StringBuilder b=new StringBuilder(); long end=System.currentTimeMillis()+timeout;
